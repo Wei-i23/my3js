@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#heading {
+	position: absolute;
+	text-align: center;
+	width:100vw;
+}
+</style>
+</head>
+<body> 
+<div id='heading'>
+	<h1 style='color:pink'>HW-2 10/12</h1>
+	<button id='toggle'>Press</button>
+</div>
+<script src="https://threejs.org/build/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+<script>
+javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
+
+//my script
+$('#toggle').click(
+function(){
+	axes.material.visible = ! axes.material.visible;
+});
+var renderer,camera,scene;	//全域變數
+var axes;
+
+init();
+animate();
+
+function init(){
+	renderer = new THREE.WebGLRenderer({animate:true});
+	renderer.setSize(window.innerWidth,window.innerHeight);
+	renderer.setClearColor(0x88888888);	
+	document.body.appendChild (renderer.domElement);
+	
+	camera = new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,1,1000);	//最後兩格是near跟far的距離
+	camera.position.z = 50;	//(0,0,50)
+	
+	var controls = new THREE.OrbitControls(camera,renderer.domElement);	//camera所對應的字串,camera與視窗連在一起
+	
+	scene = new THREE.Scene();
+	var grid = new THREE.GridHelper(100,10,'red','white');
+	scene.add(grid);
+	
+	axes = new THREE.AxesHelper(20);
+	scene.add(axes);
+	
+	
+	
+	//長方體
+	var cubeGeometry = new THREE.BoxGeometry(10,30,10);
+	var cubeMaterial = new THREE.MeshNormalMaterial();
+	var cube = new THREE.Mesh (cubeGeometry,cubeMaterial);
+	
+	cube.position.set(5,15,5);
+	
+	var cubeGeometry2 = new THREE.BoxGeometry(10,30,10);
+	var cubeMaterial2 = new THREE.MeshNormalMaterial();
+	var cube2 = new THREE.Mesh (cubeGeometry2,cubeMaterial);
+	
+	cube2.position.set(35,15,5);
+	
+	var cubeGeometry3 = new THREE.BoxGeometry(20,10,10);
+	var cubeMaterial3 = new THREE.MeshNormalMaterial();
+	var cube3 = new THREE.Mesh (cubeGeometry3,cubeMaterial);
+	
+	cube3.position.set(20,5,5);
+	scene.add(cube,cube2,cube3);
+	//scene.add(cube2);
+	//scene.add(cube3);
+}
+
+	
+function animate(){
+	renderer.render(scene,camera);
+	requestAnimationFrame(animate);
+}
+</script>
+</body>
+</html>
