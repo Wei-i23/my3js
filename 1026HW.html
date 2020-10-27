@@ -30,6 +30,7 @@ javascript:(function(){var script=document.createElement('script');script.onload
 
 var renderer,camera,scene;	//全域變數
 var axes;
+var status,car;
 
 init();
 animate();
@@ -117,14 +118,59 @@ function init(){
 	//mesh.position.set(10,15,13);
 	*/
 	
-	scene.add(cube,cube2,cylinder,cylinder2,cylinder3,cylinder4);
+	var geometry2 = new THREE.BoxGeometry(0,0,0);
+	truck = new THREE.Mesh(geometry2);
+	truck.add(cube);
+	truck.add(cube2);
+	truck.add(cylinder);
+	truck.add(cylinder2);
+	truck.add(cylinder3);
+	truck.add(cylinder4);
+	scene.add(truck);
+	
+	
 	
 }
 
 	
 function animate(){
+	//var status,car;
+	
+	if(status == 0){
+		car = 0;
+		truck.position.set (truck.position.x + 1, 0 , truck.position.z);
+		if(truck.position.x >= 50) {
+			status = 1;
+		}
+		truck.rotation.y = car;
+	}
+	else if(status == 1){
+		car = Math.PI*1.5;
+		truck.position.set (truck.position.x , 0 ,truck.position.z + 1);
+		if(truck.position.z >= 50) {
+			status = 2;
+		}
+		truck.rotation.y = car;
+	}
+	else if(status == 2){
+		car = Math.PI;
+		truck.position.set (truck.position.x -1, 0 , truck.position.z);
+		if(truck.position.x <= -50) {
+			status = 3;
+		}
+		truck.rotation.y = car;
+	}
+	else if(status == 3) {
+		car = Math.PI*0.5;
+		truck.position.set (truck.position.x , 0 , truck.position.z -1);
+		if(truck.position.z <= -50) {
+			status = 0;
+		}
+		truck.rotation.y = car;
+	}
+	
 	renderer.render(scene,camera);
-	requestAnimationFrame(animate);
+	requestAnimationFrame( animate );
 }
 </script>
 </body>

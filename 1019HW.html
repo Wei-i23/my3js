@@ -28,7 +28,7 @@ function(){
 });*/
 var renderer,camera,scene;	//全域變數
 var axes;
-var angle = 0;
+var status,p;
 
 
 init();
@@ -113,11 +113,39 @@ function init(){
 }
 
 function animate(){
-	angle +=0.01;
-	mesh.rotation.y = -angle;
+	if(status == 0){
+		p = 0;
+		mesh.position.set (mesh.position.x + 1, 0 , mesh.position.z);
+		if(mesh.position.x >= 50) {
+			status = 1;
+		}
+		mesh.rotation.y = p;
+	}
+	else if(status == 1){
+		p = Math.PI*1.5;
+		mesh.position.set (mesh.position.x , 0 ,mesh.position.z + 1);
+		if(mesh.position.z >= 50) {
+			status = 2;
+		}
+		mesh.rotation.y = p;
+	}
+	else if(status == 2){
+		p = Math.PI;
+		mesh.position.set (mesh.position.x -1, 0 , mesh.position.z);
+		if(mesh.position.x <= -50) {
+			status = 3;
+		}
+		mesh.rotation.y = p;
+	}
+	else if(status == 3) {
+		p = Math.PI*0.5;
+		mesh.position.set (mesh.position.x , 0 , mesh.position.z -1);
+		if(mesh.position.z <= -50) {
+			status = 0;
+		}
+		mesh.rotation.y = p;
+	}
 	
-	mesh.position.set(40*Math.cos(angle), 0.5, 40*Math.sin(angle));
-	camera.lookAt(mesh.position);
 	
 	requestAnimationFrame(animate);
 	renderer.render(scene,camera);
