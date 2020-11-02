@@ -31,35 +31,49 @@ javascript:(function(){var script=document.createElement('script');script.onload
 var renderer,camera,scene;	//全域變數
 var axes;
 var status,car;
+//var puck;
+var raycaster,truck;
+var mouse = new THREE.Vector2();
+var base, bases =[];
+var pickables = [];
+var myLine = null;
 
 init();
 animate();
 
 function init(){
-	renderer = new THREE.WebGLRenderer({animate:true});
-	renderer.setSize(window.innerWidth,window.innerHeight);
-	renderer.setClearColor(0x88888888);	
-	document.body.appendChild (renderer.domElement);
+	scene = new THREE.Scene();
 	
 	camera = new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,1,1000);	//最後兩格是near跟far的距離
-	camera.position.z = 50;	//(0,0,50)
+	camera.position.z = 500;	//(0,0,50)
 	
-	var controls = new THREE.OrbitControls(camera,renderer.domElement);	//camera所對應的字串,camera與視窗連在一起
+	var grid = new THREE.GridHelper(200,10,'red','white');
+	scene.add(grid);
 	
-	scene = new THREE.Scene();
+	renderer = new THREE.WebGLRenderer();
+	renderer.setSize(window.innerWidth,window.innerHeight);
+	renderer.setClearColor(0x888888);	
+	
+	let controls = new THREE.OrbitControls(camera,renderer.domElement);	//camera所對應的字串,camera與視窗連在一起
+	document.body.appendChild(renderer.domElement);
 	
 	let light = new THREE.PointLight(0xffffff);
 	light.position.set(100,300,200);
 	scene.add(light);
 	
-	var grid = new THREE.GridHelper(100,10,'red','white');
-	scene.add(grid);
+	//axes = new THREE.AxesHelper(20);
+	//scene.add(axes);
 	
-	axes = new THREE.AxesHelper(20);
-	scene.add(axes);
-	
-	
-	
+	plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({
+		transparent: true,
+		opacity: 0.5,
+		visible: true
+    }));
+    scene.add(plane);
+	plane.rotation.x = -Math.PI / 2;
+	pickables = [plane];
+	plane.material.visible = false;
+  
 	//長方體
 	var cubeGeometry = new THREE.BoxGeometry(20,20,25);
 	var cubeMaterial = new THREE.MeshPhongMaterial( { color: 0x99BBFF } );
@@ -75,9 +89,9 @@ function init(){
 	
 	
 	
-	var geometry = new THREE.CylinderGeometry(4,4,2,64);	//輪子
-	var material = new THREE.MeshPhongMaterial( {color: 0x444444 } );
-	var cylinder = new THREE.Mesh(geometry,material);
+	var circlegeometry = new THREE.CylinderGeometry(4,4,2,64);	//輪子
+	var circlematerial = new THREE.MeshPhongMaterial( {color: 0x444444 } );
+	var cylinder = new THREE.Mesh(circlegeometry,circlematerial);
 	var cylinder2 = cylinder.clone();
 	var cylinder3 = cylinder.clone();
 	var cylinder4 = cylinder.clone();
@@ -118,20 +132,66 @@ function init(){
 	//mesh.position.set(10,15,13);
 	*/
 	
-	//var geometry2 = new THREE.BoxGeometry(0,0,0);
+	
 	truck = new THREE.Object3D();
 	truck.add(cube,cube2,cylinder,cylinder2,cylinder3,cylinder4);
-	scene.add(truck);
+	//scene.add(truck);
 	
+	base = new THREE.Mesh(truck, new THREE.MeshNormalMaterial());	//線
+	
+	raycaster = new THREE.Raycaster();
+	document.addEventListener('pointerdown', onDocumentMouseDown, false);
 	
 	
 }
+function makeLine(startPoint) {
+  const MAX_LINE_POINTS = 100;
+  
+  var geometry = new THREE.Geometry();
+	
+	for (var i = 0; i < MAX_LINE_POINTS; i++) {
+		geometry.vertices.push(startPoint.clone());
+  }
 
+  myLine =  new THREE.Line(geometry,  new THREE.LineBasicMaterial( { color: 0xffff00 } ));
+
+  return myLine;
+}
+
+function addPoint(myPoint) {
+	myLine.geometry.vertices.shift();
+	myLine.geometry.vertices.push (myPoint);
+	
+	myLine.geometry.verticesNeedUpdate = true;
+}
+
+function onDocumentMouseDown(event){
+	event.preventDefault();
+	mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+	mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+	// find intersections
+	raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObjects(pickables);
+	if (intersects.length > 0 ) {
+		let bb = truck.clone();
+		bb.position.copy(intersects[0].point);
+		bb.rotation.y = -Math.PI/2;
+		scene.add (bb);
+		bases.push (bb);
+		if (myLine === null) {
+			myLine = makeLine (bb.position);
+			scene.add (myLine);
+		} else {
+			addPoint (bb.position);
+		}
+	}
+}
 	
 function animate(){
 	//var status,car;
 	
-	if(status == 0){
+	/*if(status == 0){
 		car = 0;
 		truck.position.set (truck.position.x + 1, 0 , truck.position.z);
 		if(truck.position.x >= 50) {
@@ -163,10 +223,15 @@ function animate(){
 		}
 		truck.rotation.y = car;
 	}
+	*/
 	
-	renderer.render(scene,camera);
 	requestAnimationFrame( animate );
+	render();
 }
+function render(){
+	renderer.render(scene,camera);
+}
+
 </script>
 </body>
 </html>
