@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#heading {
+	position: absolute;
+	text-align: center;
+	width:100vw;
+}
+</style>
+</head>
+<body> 
+<div id='heading'>
+	<h1 style='color:pink'>10/26HW</h1>
+	
+</div>
+<script src="https://threejs.org/build/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+
+
+</script>
+<script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+
+<script>
+javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
+
+//my script
+
+var renderer,camera,scene;	//全域變數
+var axes;
+var status,car;
+//var puck;
+var raycaster,truck;
+var mouse = new THREE.Vector2();
+var base, bases =[];
+var pickables = [];
+var myLine = null;
+
+init();
+animate();
+
+function init(){
+	scene = new THREE.Scene();
+	
+	camera = new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,1,1000);	//最後兩格是near跟far的距離
+	camera.position.z = 500;	//(0,0,50)
+	
+	var grid = new THREE.GridHelper(200,10,'red','white');
+	scene.add(grid);
+	
+	renderer = new THREE.WebGLRenderer();
+	renderer.setSize(window.innerWidth,window.innerHeight);
+	renderer.setClearColor(0x888888);	
+	
+	let controls = new THREE.OrbitControls(camera,renderer.domElement);	//camera所對應的字串,camera與視窗連在一起
+	document.body.appendChild(renderer.domElement);
+	
+	let light = new THREE.PointLight(0xffffff);
+	light.position.set(100,300,200);
+	scene.add(light);
+	
+	//axes = new THREE.AxesHelper(20);
+	//scene.add(axes);
+	
+	plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({
+		transparent: true,
+		opacity: 0.5,
+		visible: true
+    }));
+    scene.add(plane);
+	plane.rotation.x = -Math.PI / 2;
+	pickables = [plane];
+	plane.material.visible = false;
+  
+	//長方體
+	var cubeGeometry = new THREE.BoxGeometry(20,20,25);
+	var cubeMaterial = new THREE.MeshPhongMaterial( { color: 0x99BBFF } );
+	var cube = new THREE.Mesh (cubeGeometry,cubeMaterial);
+	
+	cube.position.set(0,15,0);
+	
+	var cubeGeometry2 = new THREE.BoxGeometry(10,10,25);
+	var cubeMaterial2 = new THREE.MeshPhongMaterial( { color: 0xFFFF77 } );
+	var cube2 = new THREE.Mesh (cubeGeometry2,cubeMaterial2);
+	
+	cube2.position.set(15,10,0);
+	
+	
+	
+	var circlegeometry = new THREE.CylinderGeometry(4,4,2,64);	//輪子
+	var circlematerial = new THREE.MeshPhongMaterial( {color: 0x444444 } );
+	var cylinder = new THREE.Mesh(circlegeometry,circlematerial);
+	var cylinder2 = cylinder.clone();
+	var cylinder3 = cylinder.clone();
+	var cylinder4 = cylinder.clone();
+	
+	cylinder.position.set(-5,4,13);
+	cylinder.rotation.x = Math.PI/2;
+	
+	cylinder2.position.set(15,4,13);
+	cylinder2.rotation.x = Math.PI/2;
+	
+	cylinder3.position.set(-5,4,-13);
+	cylinder3.rotation.x = Math.PI/2;
+	
+	cylinder4.position.set(15,4,-13);
+	cylinder4.rotation.x = Math.PI/2;
+	
+	
+	/*var shape = new THREE.Shape();
+	  shape.moveTo (0,0);  // xy plane
+	  shape.lineTo (10,0);
+	  shape.lineTo (10, 1.5);
+	  shape.lineTo (1.5, 10);
+	  shape.lineTo (0,10);
+	  shape.lineTo(0,0);
+	  
+	var extrudeSettings = {
+		steps: 1,
+		depth: 5,
+		bevelEnabled: false,
+	};
+	
+	var meshgeometry = new THREE.ExtrudeGeometry(shape,extrudeSettings);
+	var meshmaterial = new THREE.MeshLamberMaterial({
+		color: 0x00ff00
+	});
+	
+	var mesh = new THREE.Mesh(meshgeometry,meshmaterial);
+	//mesh.position.set(10,15,13);
+	*/
+	
+	
+	truck = new THREE.Object3D();
+	truck.add(cube,cube2,cylinder,cylinder2,cylinder3,cylinder4);
+	//scene.add(truck);
+	
+	base = new THREE.Mesh(truck, new THREE.MeshNormalMaterial());	//線
+	
+	raycaster = new THREE.Raycaster();
+	document.addEventListener('pointerdown', onDocumentMouseDown, false);
+	
+	
+}
+function makeLine(startPoint) {
+  const MAX_LINE_POINTS = 100;
+  
+  var geometry = new THREE.Geometry();
+	
+	for (var i = 0; i < MAX_LINE_POINTS; i++) {
+		geometry.vertices.push(startPoint.clone());
+  }
+
+  myLine =  new THREE.Line(geometry,  new THREE.LineBasicMaterial( { color: 0xffff00 } ));
+
+  return myLine;
+}
+
+function addPoint(myPoint) {
+	myLine.geometry.vertices.shift();
+	myLine.geometry.vertices.push (myPoint);
+	
+	myLine.geometry.verticesNeedUpdate = true;
+}
+
+function onDocumentMouseDown(event){
+	event.preventDefault();
+	mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+	mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+	// find intersections
+	raycaster.setFromCamera(mouse, camera);
+    var intersects = raycaster.intersectObjects(pickables);
+	if (intersects.length > 0 ) {
+		let bb = truck.clone();
+		bb.position.copy(intersects[0].point);
+		bb.rotation.y = -Math.PI/2;
+		scene.add (bb);
+		bases.push (bb);
+		if (myLine === null) {
+			myLine = makeLine (bb.position);
+			scene.add (myLine);
+		} else {
+			addPoint (bb.position);
+		}
+	}
+}
+	
+function animate(){
+	//var status,car;
+	
+	/*if(status == 0){
+		car = 0;
+		truck.position.set (truck.position.x + 1, 0 , truck.position.z);
+		if(truck.position.x >= 50) {
+			status = 1;
+		}
+		truck.rotation.y = car;
+	}
+	else if(status == 1){
+		car = Math.PI*1.5;
+		truck.position.set (truck.position.x , 0 ,truck.position.z + 1);
+		if(truck.position.z >= 50) {
+			status = 2;
+		}
+		truck.rotation.y = car;
+	}
+	else if(status == 2){
+		car = Math.PI;
+		truck.position.set (truck.position.x -1, 0 , truck.position.z);
+		if(truck.position.x <= -50) {
+			status = 3;
+		}
+		truck.rotation.y = car;
+	}
+	else if(status == 3) {
+		car = Math.PI*0.5;
+		truck.position.set (truck.position.x , 0 , truck.position.z -1);
+		if(truck.position.z <= -50) {
+			status = 0;
+		}
+		truck.rotation.y = car;
+	}
+	*/
+	
+	requestAnimationFrame( animate );
+	render();
+}
+function render(){
+	renderer.render(scene,camera);
+}
+
+</script>
+</body>
+</html>
