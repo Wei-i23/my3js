@@ -118,14 +118,10 @@ function init(){
 	//mesh.position.set(10,15,13);
 	*/
 	
-	var geometry2 = new THREE.BoxGeometry(0,0,0);
-	truck = new THREE.Mesh(geometry2);
-	truck.add(cube);
-	truck.add(cube2);
-	truck.add(cylinder);
-	truck.add(cylinder2);
-	truck.add(cylinder3);
-	truck.add(cylinder4);
+	
+	truck = new THREE.Object3D();
+	truck.add(cube,cube2,cylinder,cylinder2,cylinder3,cylinder4);
+	
 	scene.add(truck);
 	
 	
