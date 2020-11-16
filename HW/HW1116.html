@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+#heading {
+	position: absolute;
+	text-align: center;
+	width:100vw;
+}
+</style>
+</head>
+<body> 
+
+
+<div id='heading'>
+	<h1 style='color:pink'>1116HW</h1>
+	<button id = 'toggle' style = 'width: 20%'>Toggle Turn </button> 
+	
+</div>
+
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+<script type ="module">
+javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
+
+import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+import { MTLLoader } from 'https://unpkg.com/three/examples/jsm/loaders/MTLLoader.js';
+import { OBJLoader } from 'https://unpkg.com/three/examples/jsm/loaders/OBJLoader.js';
+
+$('#toggle').click(function() {
+	turn = !turn;
+	if(turn)
+		$('#toggle').text ('stop');
+	else
+		$('#toggle').text ('turn');
+});
+
+//my script
+
+var renderer,camera,scene;	//全域變數
+var axes,frame,line;
+var status,car;
+var puck,bases = [];
+var raycaster;
+var mouse = new THREE.Vector2();
+
+var pickables = [];
+var myLine = null;
+var intersects;
+var point,now,next,prev,RunOrStop;
+var v, ds, moveTo, stepNum, steps;
+var theta1,theta2,dq;
+var turn = false;
+var x;
+
+init();
+animate();
+
+function init(){
+	scene = new THREE.Scene();
+	
+	camera = new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,1,10000);	//最後兩格是near跟far的距離
+	camera.position.z = 500;	//(0,0,50)
+	
+	var grid = new THREE.GridHelper(500,10,'red','white');
+	scene.add(grid);
+	
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setSize(window.innerWidth,window.innerHeight);
+	renderer.setClearColor(0x888888);	
+	
+	var controls = new OrbitControls(camera,renderer.domElement);	//camera所對應的字串,camera與視窗連在一起
+	document.body.appendChild(renderer.domElement);
+	
+	var light = new THREE.SpotLight(0xffffff);
+	//var spotLightHelper = new THREE.PointHelper(light);
+	light.position.set (-20,100,0);
+	scene.add(light);
+	
+	 point = [new THREE.Vector3(0,0,0)];  // 起始點
+	var geometry = new THREE.BufferGeometry().setFromPoints(point);
+	var material = new THREE.LineBasicMaterial({ color : 0x000000});
+	line = new THREE.Line(geometry,material);
+	scene.add(line);
+ 
+	
+	var plane = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshBasicMaterial({
+		transparent: true,
+		opacity: 0.5,
+		visible: true
+    }));
+    scene.add(plane);
+	plane.rotation.x = -Math.PI / 2;
+	pickables = [plane];
+	plane.material.visible = false;
+	
+	puck = new THREE.Mesh(new THREE.CylinderGeometry(10,10,2,20),new THREE.MeshNormalMaterial());
+	
+
+	
+	raycaster = new THREE.Raycaster();
+	document.addEventListener('pointerdown', onDocumentMouseDown, false);
+	
+	
+	readModel('Cars');
+}
+
+function readModel (modelName,targetSize=100) {
+
+	var onProgress = function(xhr) {
+		if(xhr.lengthComputable){
+			var percentComplete = xhr.loaded / xhr.total * 100;
+			console.log(Math.round(percentComplete, 2) + '% downloaded');
+		}
+	};
+	
+	var onError = function(xhr) {};
+	
+	var mtlLoader = new MTLLoader();
+	mtlLoader.setPath('models/');
+	mtlLoader.load(modelName+'.mtl', function(materials) {
+	
+		materials.preload();
+			
+		var objLoader = new OBJLoader();
+		objLoader.setMaterials(materials);
+		objLoader.setPath('models/');
+		objLoader.load(modelName+'.obj', function(object) {
+			
+			let theObject = unitize (object,targetSize);
+			theObject.name = 'OBJ'
+			theObject.position.y = 8;
+			//scene.add(theObject);
+				
+			car = new THREE.Object3D();
+			car.add(theObject);
+			
+			scene.add(car);
+			
+		},onProgress,onError);
+	});
+}
+
+function unitize (object,targetSize) {
+		
+	var box3 = new THREE.Box3();
+	box3.setFromObject (object);
+	var size = new THREE.Vector3();
+	size.subVectors(box3.max, box3.min);
+	var center = new THREE.Vector3();
+	center.addVectors(box3.max, box3.min).multiplyScalar (0.5);
+	
+	console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
+	console.log ('size: ' + size.x + ', ' + size.y + ', '+size.z );
+
+	var objSize = Math.max (size.x, size.y, size.z);
+	var scaleSet = targetSize/objSize;
+	
+	var theObject = new THREE.Object3D();
+	theObject.add (object);
+	object.scale.set(scaleSet,scaleSet,scaleSet);
+	object.position.set(-center.x*scaleSet, -center.y*scaleSet, -center.z*scaleSet);
+	
+	return theObject;
+	
+}
+
+function WhichButton(event) {
+	x = event.buttons;
+	return false;
+}
+/*
+function rotateBillboard(mesh) {
+	var b = mesh.position.clone();
+	var rotaxis = new THREE.Vector3();
+	var v,yhat,n;
+	
+	v = camera.position.clone();
+	yhat = new THREE.Vector3(0,1,0);
+	n = new THREE.Vector3(0,0,1);
+	
+	v.subVectors(v,b);
+	v.sub(yhat.clone().multiplyScalar(v.dot(yhat)));
+	v.normalize();
+	
+	rotangle = Math.acos(v.dot(n));
+	rotaxis.crossVectors(n,v);
+	if(rotaxis.dot(yhat)<0) rotangle *= -1;
+	
+	mesh.rotation.y = rotangle;
+}
+
+function rotateBillboardNew(mesh){
+	let groundShadow = camera.position.clone();
+	groundShadow.y = 0;
+	mesh.lookAt(groundShadow);
+}
+*/
+function makeLine(startPoint) {
+  const MAX_LINE_POINTS = 100;
+  
+  var geometry = new THREE.Geometry();
+	
+	for (var i = 0; i < MAX_LINE_POINTS; i++) {
+		geometry.vertices.push(startPoint.clone());
+  }
+
+  myLine =  new THREE.Line(geometry,  new THREE.LineBasicMaterial( { color: 0xffff00 } ));
+
+  return myLine;
+}
+
+function addPoint(myPoint) {
+	myLine.geometry.vertices.shift();
+	myLine.geometry.vertices.push (myPoint);
+	
+	myLine.geometry.verticesNeedUpdate = true;
+}
+
+function onDocumentMouseDown(event){
+	event.preventDefault();
+	mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+	mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+
+	raycaster.setFromCamera(mouse, camera);
+    intersects = raycaster.intersectObjects(pickables);
+	document.addEventListener('contextmenu', event => event.preventDefault());
+	
+	if (intersects.length > 0 && x!=2) {
+		console.log(point.length);
+		WhichButton(event);
+		
+		if(x==1){
+			
+			point.push(intersects[0].point);
+			let bb = puck.clone();
+			bb.position.copy(intersects[0].point);
+			bb.rotation.y = -Math.PI/2;
+			scene.add (bb);
+			bases.push(bb);
+			
+			if (myLine === null) {
+				myLine = makeLine (bb.position);
+				scene.add (myLine);
+			} else {
+				addPoint (bb.position);
+			}
+		}
+		
+		if(x==2){	//右鍵
+			now = 0;
+			next = 1;
+			prev = point.length -1;
+			RunOrStop = false;
+			
+			theta1 = 0;
+			car.position.copy(point[now]);
+			car.rotation.y = theta1;
+			
+			var p23 = point[next].clone().sub(point[now]);
+			theta2 = Math.atan2(p23.x,p23.z);
+			
+			dq = 0.06 ;
+			
+			if(theta2 < 0){
+				theta2 += Math.PI * 2;
+			}
+			if(theta1 < 0){
+				theta1 += Math.PI * 2;
+			}
+			if(theta1 > theta2){
+				if(theta1 - Math.PI > theta2){
+					steps = Math.floor((Math.PI * 2 - (theta1-theta2))/dq);
+				}
+				else{
+					steps = Math.floor((theta1-theta2)/dq);
+					dq = -dq;
+				}
+			}
+			else{
+				if(theta2 - Math.PI > theta1){
+					steps = Math.floor((Math.PI*2-(theta2-theta1))/dq);
+					dq = -dq;
+				}
+				else{
+					steps = Math.floor((theta2-theta1)/dq);
+				}
+			}
+			
+			stepNum = 0;
+			moveTo = theta1;
+			
+			var point2 = [];
+			for(var i=0;i<point.length;i++)
+				point2.push(point[i]);
+			point2.push(new THREE.Vector3());
+			
+			var geometry = new THREE.BufferGeometry().setFromPoints(point2);
+			var material = new THREE.LineBasicMaterial({ color : 0x000000});
+			
+			line = new THREE.Line(geometry,material);
+			scene.add(line);
+		}
+		
+	}
+}
+	
+function animate(){
+	
+	if(turn){
+		if(RunOrStop){
+			running();
+		}
+		else{
+			rotate();
+		}
+	}
+	
+	requestAnimationFrame( animate );
+	renderer.render(scene,camera);
+}
+
+function running(){
+
+	moveTo = moveTo.clone().add (v.clone().setLength(ds)); // 移動 + 向量 V + 一步的距離
+	stepNum++; // 步數++
+	
+	if (stepNum > steps){ // 步數 > 總步數 代表已抵達
+		car.position.copy (point[next]);  //指到下一個點
+		RunOrStop = false; // 旋轉
+		next++;now++;prev++; //移動到下一個點
+		next %= point.length;now %= point.length;prev %= point.length; //超過點的數量 從起點開始
+	
+	  var p12 = point[now].clone().sub(point[prev]);	  // p12 = p2 - p1
+	  theta1 = Math.atan2 (p12.x, p12.z); //角度
+	  car.position.copy (point[now]);
+	  car.rotation.y = theta1;
+
+	  var p23 = point[next].clone().sub(point[now]);   // p23 = p3 - p2
+	  theta2 = Math.atan2 (p23.x, p23.z); //角度
+
+	  dq = 0.06; // 旋轉的移動的距離
+	  
+	  if (theta2 < 0) { // 異號
+		theta2 += Math.PI * 2;
+	  }
+	  
+	  if (theta1 <  0) { // 異號
+		theta1 += Math.PI * 2;
+	  }
+	  
+	  if(theta1 > theta2){
+		if(theta1 - Math.PI > theta2){
+			steps = Math.floor ((Math.PI * 2 - (theta1-theta2))/dq);
+		}
+		else {
+			steps = Math.floor ((theta1-theta2)/dq);
+			dq = -dq;
+		}
+	  }
+	  else {
+		if(theta2 - Math.PI > theta1){
+			steps = Math.floor ((Math.PI * 2 - (theta2-theta1))/dq);
+			dq = -dq;
+		}
+		else {
+			steps = Math.floor ((theta2-theta1)/dq);
+		}
+	  }
+	  
+	  
+	   // debugger;
+	  stepNum = 0;
+	  moveTo = theta1;
+	  
+  }
+		
+  else 
+		car.position.copy (moveTo);
+
+}
+function rotate(){
+
+	  if (stepNum > steps){ // 步數 > 總步數 代表已抵達
+		car.rotation.y = theta2;
+		RunOrStop = true; // 繼續走
+		
+		 v = point[next].clone().sub(point[now]); // v = p2 - p1
+		  ds = 0.8;
+		  steps = Math.floor(v.length()/ds);
+		  moveTo = point[now].clone();
+		  stepNum = 0;
+	  }
+		
+	else {
+		car.rotation.y = moveTo; 
+		++stepNum;
+		moveTo += dq;
+	}
+ 
+}
+
+</script>
+</body>
+</html>

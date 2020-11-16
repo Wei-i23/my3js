@@ -98,6 +98,7 @@ function init(){
 	cylinder1.position.set(10,3,0);
 	cylinder1.rotation.z = Math.PI/2;
 	
+<<<<<<< HEAD
 	var geometry2 = new THREE.BoxGeometry(0,0,0);
 	mesh = new THREE.Mesh(geometry2);
 	mesh.add(cube);
@@ -108,6 +109,12 @@ function init(){
 	mesh.add(cube6);
 	mesh.add(cylinder);
 	mesh.add(cylinder1);
+=======
+	
+	mesh = new THREE.Object3D();
+	mesh.add(cube,cube2,cube3,cube4,cube5,cube6,cylinder,cylinder1);
+	
+>>>>>>> master
 	scene.add(mesh);
 	
 }

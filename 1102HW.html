@@ -11,17 +11,18 @@
 </head>
 <body> 
 <div id='heading'>
-	<h1 style='color:pink'>10/26HW</h1>
+	<h1 style='color:pink'>1102HW</h1>
 	
 </div>
 <script src="https://threejs.org/build/three.min.js"></script>
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 <script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="https://raw.githack.com/jyunming-chen/tutsplus/master/js/KeyboardState.js"></script>
 
 
 
 </script>
-<script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
+
 
 <script>
 javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
@@ -31,12 +32,14 @@ javascript:(function(){var script=document.createElement('script');script.onload
 var renderer,camera,scene;	//全域變數
 var axes;
 var status,car;
-//var puck;
+var puck,bases = [];
 var raycaster,truck;
 var mouse = new THREE.Vector2();
-var base, bases =[];
+
 var pickables = [];
 var myLine = null;
+
+
 
 init();
 animate();
@@ -44,10 +47,10 @@ animate();
 function init(){
 	scene = new THREE.Scene();
 	
-	camera = new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,1,1000);	//最後兩格是near跟far的距離
+	camera = new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,1,10000);	//最後兩格是near跟far的距離
 	camera.position.z = 500;	//(0,0,50)
 	
-	var grid = new THREE.GridHelper(200,10,'red','white');
+	var grid = new THREE.GridHelper(500,10,'red','white');
 	scene.add(grid);
 	
 	renderer = new THREE.WebGLRenderer();
@@ -61,10 +64,9 @@ function init(){
 	light.position.set(100,300,200);
 	scene.add(light);
 	
-	//axes = new THREE.AxesHelper(20);
-	//scene.add(axes);
 	
-	plane = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshBasicMaterial({
+	
+	plane = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshBasicMaterial({
 		transparent: true,
 		opacity: 0.5,
 		visible: true
@@ -73,6 +75,9 @@ function init(){
 	plane.rotation.x = -Math.PI / 2;
 	pickables = [plane];
 	plane.material.visible = false;
+	
+	puck=new THREE.Mesh(new THREE.CylinderGeometry(10,10,2,20),new THREE.MeshNormalMaterial());
+	
   
 	//長方體
 	var cubeGeometry = new THREE.BoxGeometry(20,20,25);
@@ -109,38 +114,18 @@ function init(){
 	cylinder4.rotation.x = Math.PI/2;
 	
 	
-	/*var shape = new THREE.Shape();
-	  shape.moveTo (0,0);  // xy plane
-	  shape.lineTo (10,0);
-	  shape.lineTo (10, 1.5);
-	  shape.lineTo (1.5, 10);
-	  shape.lineTo (0,10);
-	  shape.lineTo(0,0);
-	  
-	var extrudeSettings = {
-		steps: 1,
-		depth: 5,
-		bevelEnabled: false,
-	};
 	
-	var meshgeometry = new THREE.ExtrudeGeometry(shape,extrudeSettings);
-	var meshmaterial = new THREE.MeshLamberMaterial({
-		color: 0x00ff00
-	});
-	
-	var mesh = new THREE.Mesh(meshgeometry,meshmaterial);
-	//mesh.position.set(10,15,13);
-	*/
 	
 	
 	truck = new THREE.Object3D();
 	truck.add(cube,cube2,cylinder,cylinder2,cylinder3,cylinder4);
-	//scene.add(truck);
+	
 	
 	base = new THREE.Mesh(truck, new THREE.MeshNormalMaterial());	//線
 	
 	raycaster = new THREE.Raycaster();
 	document.addEventListener('pointerdown', onDocumentMouseDown, false);
+	
 	
 	
 }
@@ -174,11 +159,11 @@ function onDocumentMouseDown(event){
 	raycaster.setFromCamera(mouse, camera);
     var intersects = raycaster.intersectObjects(pickables);
 	if (intersects.length > 0 ) {
-		let bb = truck.clone();
+		let bb = puck.clone();
 		bb.position.copy(intersects[0].point);
 		bb.rotation.y = -Math.PI/2;
 		scene.add (bb);
-		bases.push (bb);
+		bases.push(bb);
 		if (myLine === null) {
 			myLine = makeLine (bb.position);
 			scene.add (myLine);
@@ -189,41 +174,9 @@ function onDocumentMouseDown(event){
 }
 	
 function animate(){
-	//var status,car;
+	//status = bb.position.copy(intersects[0].point);
+	//for(var i=1;i<intersects.length;i++){
 	
-	/*if(status == 0){
-		car = 0;
-		truck.position.set (truck.position.x + 1, 0 , truck.position.z);
-		if(truck.position.x >= 50) {
-			status = 1;
-		}
-		truck.rotation.y = car;
-	}
-	else if(status == 1){
-		car = Math.PI*1.5;
-		truck.position.set (truck.position.x , 0 ,truck.position.z + 1);
-		if(truck.position.z >= 50) {
-			status = 2;
-		}
-		truck.rotation.y = car;
-	}
-	else if(status == 2){
-		car = Math.PI;
-		truck.position.set (truck.position.x -1, 0 , truck.position.z);
-		if(truck.position.x <= -50) {
-			status = 3;
-		}
-		truck.rotation.y = car;
-	}
-	else if(status == 3) {
-		car = Math.PI*0.5;
-		truck.position.set (truck.position.x , 0 , truck.position.z -1);
-		if(truck.position.z <= -50) {
-			status = 0;
-		}
-		truck.rotation.y = car;
-	}
-	*/
 	
 	requestAnimationFrame( animate );
 	render();
