@@ -39,20 +39,15 @@ $('#toggle').click(function() {
 //my script
 
 var renderer,camera,scene;	//全域變數
-var frame,car,line;
-
-var puck;
-var raycaster;
-var mouse = new THREE.Vector2();
-
-var pickables = [];
-var myLine = null;
-var intersects;
+var car= new THREE.Object3D();
+var pickables ;
+var pts ,lines , points ;
 var point,now,next,prev,RunOrStop;
-var distance,ds, moveTo, stepNum, steps;
+var ds, moveTo, stepNum, steps;
 var theta1,theta2,dq;
 var turn = false;
-var x;
+var plane;
+var p = [],v;
 
 init();
 animate();
@@ -69,23 +64,15 @@ function init(){
 	renderer = new THREE.WebGLRenderer({antialias: true});
 	renderer.setSize(window.innerWidth,window.innerHeight);
 	renderer.setClearColor(0x888888);	
-	
-	var controls = new OrbitControls(camera,renderer.domElement);	//camera所對應的字串,camera與視窗連在一起
 	document.body.appendChild(renderer.domElement);
 	
+	var controls = new OrbitControls(camera,renderer.domElement);	//camera所對應的字串,camera與視窗連在一起
+	
 	var light = new THREE.SpotLight(0xffffff);
-	//var spotLightHelper = new THREE.PointHelper(light);
 	light.position.set (-20,100,0);
 	scene.add(light);
 	
-	 point = [new THREE.Vector3(0,0,0)];  // 起始點
-	var geometry = new THREE.BufferGeometry().setFromPoints(point);
-	var material = new THREE.LineBasicMaterial({ color : 0x000000});
-	line = new THREE.Line(geometry,material);
-	scene.add(line);
- 
-	
-	var plane = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshBasicMaterial({
+	plane = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshBasicMaterial({
 		transparent: true,
 		opacity: 0.5,
 		visible: true
@@ -93,16 +80,13 @@ function init(){
     scene.add(plane);
 	plane.rotation.x = -Math.PI / 2;
 	pickables = [plane];
-	plane.material.visible = false;
 	
-    puck = new THREE.Mesh(new THREE.CylinderGeometry(10,10,2,20),new THREE.MeshNormalMaterial());
-	
-
-	
-	raycaster = new THREE.Raycaster();
+    
 	document.addEventListener('pointerdown', onDocumentMouseDown, false);
 	
-	
+	pts = [];
+	lines = [];
+	points = [];
 	readModel('Cars');
 }
 
@@ -130,12 +114,9 @@ function readModel (modelName,targetSize=100) {
 			
 			let theObject = unitize (object,targetSize);
 			theObject.name = 'OBJ'
-			theObject.position.y = 8;
-			//scene.add(theObject);
-				
-			car = new THREE.Object3D();
-			car.add(theObject);
+			theObject.add ( new THREE.BoxHelper (theObject) )
 			
+			car.add(theObject);
 			scene.add(car);
 			
 		},onProgress,onError);
@@ -149,7 +130,7 @@ function unitize (object,targetSize) {
 	var size = new THREE.Vector3();
 	size.subVectors(box3.max, box3.min);
 	var center = new THREE.Vector3();
-	center.addVectors(box3.max, box3.min).multiplyScalar (0.5);
+	center.addVectors(box3.max, box3.min).multiplyScalar (0.0);
 	
 	console.log ('center: ' + center.x + ', '+center.y + ', '+center.z );
 	console.log ('size: ' + size.x + ', ' + size.y + ', '+size.z );
@@ -166,122 +147,153 @@ function unitize (object,targetSize) {
 	
 }
 
-function WhichButton(event) {
-	x = event.buttons;
-	return false;
+
+function makeLine(p1, p2) {
+	var geometry = new THREE.Geometry();
+	geometry.vertices.push (p1.clone(), p2.clone());
+  	var line = new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 'black'}));
+	
+	return line;	
 }
 
-function makeLine(startPoint) {
-  const MAX_LINE_POINTS = 100;
-  
-  var geometry = new THREE.Geometry();
+function makePoint (pos) {
+	var p = new THREE.Mesh (new THREE.CircleGeometry (5,20), 
+	new THREE.MeshBasicMaterial({color:'cyan'}));
+	p.rotation.x = -Math.PI/2;
+	p.position.copy (pos);
 	
-	for (var i = 0; i < MAX_LINE_POINTS; i++) {
-		geometry.vertices.push(startPoint.clone());
-  }
-
-  myLine =  new THREE.Line(geometry,  new THREE.LineBasicMaterial( { color: 0xffff00 } ));
-
-  return myLine;
-}
-
-function addPoint(myPoint) {
-	myLine.geometry.vertices.shift();
-	myLine.geometry.vertices.push (myPoint);
-	
-	myLine.geometry.verticesNeedUpdate = true;
+	return p;
 }
 
 function onDocumentMouseDown(event){
-	event.preventDefault();
-	mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-	mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-
-	raycaster.setFromCamera(mouse, camera);
-    var intersects = raycaster.intersectObjects(pickables);
-	document.addEventListener('contextmenu', event => event.preventDefault());
+	if (event.button === 2) {  
+		
+		let line = makeLine(pts[0], pts[pts.length-1]);
+		lines.push (line);
+		scene.add (line);
+		
 	
-	if (intersects.length > 0 && x!=2) {
-		console.log(point.length);
-		WhichButton(event);
-		
-		if(x==1){
-			
-			point.push(intersects[0].point);
-			let bb = puck.clone();
-			bb.position.copy(intersects[0].point);
-			bb.rotation.y = -Math.PI/2;
-			scene.add (bb);
-			var bases=[];
-			bases.push(bb);
-			
-			if (myLine === null) {
-				myLine = makeLine (bb.position);
-				scene.add (myLine);
-			} else {
-				addPoint (bb.position);
-			}
-		}
-		
-		if(x==2){	//右鍵
-			now = 0;
+		pickables = [];
+		plane.material.visible = false;
+			prev = p.length - 1; 
+			now = 0;	
 			next = 1;
-			prev = point.length -1;
-			RunOrStop = false;
-			
-			theta1 = 0;
-			car.position.copy(point[now]);
-			car.rotation.y = theta1;
-			
-			var p23 = point[next].clone().sub(point[now]);
-			theta2 = Math.atan2(p23.x,p23.z);
-			
-			dq = 0.06 ;
-			
-			if(theta2 < 0){
-				theta2 += Math.PI * 2;
-			}
-			if(theta1 < 0){
-				theta1 += Math.PI * 2;
-			}
-			if(theta1 > theta2){
-				if(theta1 - Math.PI > theta2){
-					steps = Math.floor((Math.PI * 2 - (theta1-theta2))/dq);
-				}
-				else{
-					steps = Math.floor((theta1-theta2)/dq);
-					dq = -dq;
-				}
-			}
-			else{
-				if(theta2 - Math.PI > theta1){
-					steps = Math.floor((Math.PI*2-(theta2-theta1))/dq);
-					dq = -dq;
-				}
-				else{
-					steps = Math.floor((theta2-theta1)/dq);
-				}
-			}
-			
-			stepNum = 0;
-			moveTo = theta1;
-			
-			var point2 = [];
-			for(var i=0;i<point.length;i++)
-				point2.push(point[i]);
-			point2.push(new THREE.Vector3());
-			
-			var geometry = new THREE.BufferGeometry().setFromPoints(point2);
-			var material = new THREE.LineBasicMaterial({ color : 0x000000});
-			
-			line = new THREE.Line(geometry,material);
-			scene.add(line);
-		}
+			RunOrStop = true;
+			walkingInit();
 		
+	  }
+	  
+	  event.preventDefault();
+	  let mouse = new THREE.Vector2();
+	  let raycaster = new THREE.Raycaster();
+	  
+	  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+	  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+	  // find intersections
+	  raycaster.setFromCamera(mouse, camera);
+	  var intersects = raycaster.intersectObjects(pickables);
+	  
+	  var store = intersects[0].point;
+			p.push(store);
+			
+	  if (intersects.length > 0) {
+		pts.push (intersects[0].point.clone());
+		let point = makePoint (pts[pts.length-1]); 
+		points.push (point);
+		scene.add (point);
+		if (pts.length > 1) {
+			let line = makeLine (pts[pts.length-1], pts[pts.length-2]);
+			lines.push (line);
+			scene.add (line);
+		}
 	}
 }
+
+function walkingInit(){
+	v = p[next].clone().sub(p[now]);   
+	ds = 0.51;							
+	steps = Math.floor(v.length()/ds);	
+	moveTo = p[now].clone();
+	stepNum = 0 ;
+}
+function running(){
+
+	moveTo = moveTo.clone().add (v.clone().setLength(ds)); 
+	stepNum++; 
 	
+	if (stepNum > steps){ 
+		car.position.copy (p[next]);  
+		RunOrStop = false; 
+		next++;now++;prev++; 
+		next %= p.length; now %= p.length; prev %= p.length; 
+		rotatingInit();
+	  
+	}
+		
+	 else 
+		car.position.copy (moveTo);
+
+}
+function rotatingInit(){
+	
+	var p12 = p[now].clone().sub(p[prev]);	 
+	var theta1 = Math.atan2(p12.x,p12.z);
+
+	car.rotation.y = theta1;   
+	
+	var p23 = p[next].clone().sub(p[now]); 		
+	theta2 = Math.atan2(p23.x,p23.z);
+	
+	dq = 0.05;					
+	
+	if (theta2 < 0) { 		
+		theta2 += Math.PI * 2;
+	 }
+	  
+	if (theta1 < 0) { 
+		theta1 += Math.PI * 2;
+	}
+	  
+	if(theta1 > theta2){
+		if(theta1 - Math.PI > theta2){
+			steps = Math.floor ((Math.PI * 2 - (theta1-theta2))/dq);
+		}
+		else {
+			steps = Math.floor ((theta1-theta2)/dq);
+			dq = -dq;
+		}
+	}
+	else {
+		if(theta2 - Math.PI > theta1){
+			steps = Math.floor ((Math.PI * 2 - (theta2-theta1))/dq);
+			dq = -dq;
+		}
+		else {
+			steps = Math.floor ((theta2-theta1)/dq);
+		}
+	 }
+	 
+	stepNum = 0;
+	moveTo = theta1 ; 
+}
+
+function rotate(){
+
+	  if (stepNum > steps){ 
+		car.rotation.y = theta2;
+		RunOrStop = true; 
+		walkingInit();
+    }
+		
+	else {
+		car.rotation.y = moveTo; 
+		++stepNum;
+		moveTo += dq;
+	}
+ 
+}
+
 function animate(){
 	
 	if(turn){
@@ -297,85 +309,8 @@ function animate(){
 	renderer.render(scene,camera);
 }
 
-function running(){
 
-	moveTo = moveTo.clone().add (distance.clone().setLength(ds)); 
-	stepNum++; 
-	
-	if (stepNum > steps){ 
-		car.position.copy (point[next]);  
-		RunOrStop = false; 
-		next++;now++;prev++; 
-		next %= point.length;now %= point.length;prev %= point.length; 
-	
-	  var p12 = point[now].clone().sub(point[prev]);	  
-	  theta1 = Math.atan2 (p12.x, p12.z); 
-	  car.position.copy (point[now]);
-	  car.rotation.y = theta1;
 
-	  var p23 = point[next].clone().sub(point[now]);   // p23 = p3 - p2
-	  theta2 = Math.atan2 (p23.x, p23.z); 
-
-	  dq = 0.06; // 旋轉的移動的距離
-	  
-	  if (theta2 < 0) { 
-		theta2 += Math.PI * 2;
-	  }
-	  
-	  if (theta1 <  0) { 
-		theta1 += Math.PI * 2;
-	  }
-	  
-	  if(theta1 > theta2){
-		if(theta1 - Math.PI > theta2){
-			steps = Math.floor ((Math.PI * 2 - (theta1-theta2))/dq);
-		}
-		else {
-			steps = Math.floor ((theta1-theta2)/dq);
-			dq = -dq;
-		}
-	  }
-	  else {
-		if(theta2 - Math.PI > theta1){
-			steps = Math.floor ((Math.PI * 2 - (theta2-theta1))/dq);
-			dq = -dq;
-		}
-		else {
-			steps = Math.floor ((theta2-theta1)/dq);
-		}
-	  }
-	  
-	  
-	   
-	  stepNum = 0;
-	  moveTo = theta1;
-	  
-  }
-		
-  else 
-		car.position.copy (moveTo);
-
-}
-function rotate(){
-
-	  if (stepNum > steps){ 
-		car.rotation.y = theta2;
-		RunOrStop = true; 
-		
-		distance = point[next].clone().sub(point[now]); // v = p2 - p1
-		  ds = 0.8;
-		  steps = Math.floor(distance.length()/ds);
-		  moveTo = point[now].clone();
-		  stepNum = 0;
-	  }
-		
-	else {
-		car.rotation.y = moveTo; 
-		++stepNum;
-		moveTo += dq;
-	}
- 
-}
 
 </script>
 </body>
