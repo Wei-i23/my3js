@@ -27,7 +27,7 @@ animate();
 
 //背景
 function loadCubemap(){
-	/*var path = "https://threejs.org/examples/textures/cube/SwedishRoyalCastle/";
+	/*var path = "https://wei-i23.github.io/my3js/path/background.png";
 	var format = '.jpg';
 	var urls = [
 		path + 'px' + format, path + 'nx' + format,
@@ -35,7 +35,7 @@ function loadCubemap(){
 		path + 'pz' + format, path + 'nz' + format
 	];*/
 	var urls = [
-		"https://github.com/Wei-i23/my3js/blob/master/path/background.png?raw=true"
+		"https://wei-i23.github.io/my3js/path/background.png"
 	];
 	var backloader = new THREE.CubeTextureLoader();
 	backloader.setCrossOrigin('');
@@ -70,14 +70,6 @@ function init() {
 	var light = new THREE.PointLight(0xffffff,1,100);
 	light.position.set(10,10,10);
 	scene.add(light);
-	/*
-	var material = new THREE.MeshBasicMaterial({
-		envMap: cubeMap
-	});
-	mesh = new THREE.Mesh(cola,material);
-	scene.add(mesh);
-	*/
-	
 	
 	// cola
 	let loader = new THREE.TextureLoader();
