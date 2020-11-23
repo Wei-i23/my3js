@@ -27,16 +27,16 @@ animate();
 
 //背景
 function loadCubemap(){
-	/*var path = "https://wei-i23.github.io/my3js/path/SSYdy2Q.jpg";
+	var path = "https://wei-i23.github.io/my3js/path/";
 	var format = '.jpg';
 	var urls = [
-		path + 'px' + format, path + 'nx' + format,
-		path + 'py' + format, path + 'ny' + format,
-		path + 'pz' + format, path + 'nz' + format
-	];*/
-	var urls = [
-		"https://wei-i23.github.io/my3js/path/SSYdy2Q.jpg"
+		path + 'posx' + format, path + 'negx' + format,
+		path + 'posy' + format, path + 'negy' + format,
+		path + 'posz' + format, path + 'negz' + format
 	];
+	/*var urls = [
+		"https://wei-i23.github.io/my3js/path/SSYdy2Q.jpg"
+	];*/
 	
 	var loader = new THREE.CubeTextureLoader();
 	loader.setCrossOrigin('');
