@@ -27,7 +27,7 @@ animate();
 
 //背景
 function loadCubemap(){
-	/*var path = "https://wei-i23.github.io/my3js/path/background.png";
+	/*var path = "https://wei-i23.github.io/my3js/path/SSYdy2Q.jpg";
 	var format = '.jpg';
 	var urls = [
 		path + 'px' + format, path + 'nx' + format,
@@ -35,11 +35,12 @@ function loadCubemap(){
 		path + 'pz' + format, path + 'nz' + format
 	];*/
 	var urls = [
-		"https://wei-i23.github.io/my3js/path/background.png"
+		"https://wei-i23.github.io/my3js/path/SSYdy2Q.jpg"
 	];
-	var backloader = new THREE.CubeTextureLoader();
-	backloader.setCrossOrigin('');
-	var cubeMap = backloader.load(urls);
+	
+	var loader = new THREE.CubeTextureLoader();
+	loader.setCrossOrigin('');
+	var cubeMap = loader.load(urls);
 	cubeMap.format = THREE.RGBFormat;
 	return cubeMap;
 }
