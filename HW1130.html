@@ -1,0 +1,101 @@
+<html>
+<head>
+<style>
+#info {
+  position: absolute;
+  width: 100vw;
+  text-align: center;
+}
+
+body {
+  overflow: hidden;
+}
+
+</style>
+<body>
+<div id="info">
+<h1 style='color:pink'>Billboard Forest
+
+</div>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+<script type ="module">
+javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
+
+import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+
+var camera, scene, renderer,controls;
+var trees = [];
+
+init();
+animate();
+
+function init() {
+
+	scene = new THREE.Scene();
+
+	camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+	camera.position.z = 300;
+	camera.position.y = 50;
+
+	renderer = new THREE.WebGLRenderer({antialias:true});	//antialias可以增加抗鉅齒
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.setClearColor(0x888888);
+
+	controls = new OrbitControls(camera, renderer.domElement);
+	//controls.target = new THREE.Vector3(0,0,0);
+	controls.autoRotate = true;		//旋轉全景圖
+	//利用true/false重新初始化全景圖
+	//true將自動旋轉開啟
+	
+	document.body.appendChild(renderer.domElement);
+	
+	let gridXZ = new THREE.GridHelper(500, 20, 'red', 'white')
+	scene.add(gridXZ);
+	
+	//tree的材紙
+	let loader = new THREE.TextureLoader();
+	loader.crossOrigin = '';
+	var texture = loader.load('https://i.imgur.com/BPFHYLP.png');
+	
+	var texMat = new THREE.MeshBasicMaterial({
+		map: texture,
+		alphaTest: 0.5
+	});
+	
+	//tree的移動
+	var tree = new THREE.Mesh(new THREE.PlaneGeometry(40,80),texMat);
+	//var trees = [];
+	
+	for(let i=0;i<15;i++){
+		let tt = tree.clone();
+		tt.position.set((-1+Math.random()*2)*180,40,(-1+Math.random()*2)*180);
+		trees.push(tt);
+		scene.add(tt);
+	}
+	/*
+	//平面向量
+	var vec = new THREE.Vector3(0,50, );	//樹到相機的向量
+	vec.projectOnPlane(new THREE.Vector3(0,y,0))	
+	//planeNormal的法線在xz平面的話是取y的法線
+	_vector.copy(this).projectOnVector(planeNormal);
+	return this.sub(_vector);*/
+}
+function animate() {
+ 
+ 	controls.update();
+  
+	trees.forEach (function(t) {t.lookAt (camera.position.clone().projectOnPlane(new THREE.Vector3(0,1,0)).add(new THREE.Vector3(0,80,0)))});  
+	//lookAt是讓每個樹都朝著camera的方向
+  
+	requestAnimationFrame(animate);
+	renderer.render(scene, camera);
+
+}
+	
+	
+
+</script>
+</body>
+</html>
