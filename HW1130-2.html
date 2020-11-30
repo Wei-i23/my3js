@@ -31,7 +31,6 @@ var uvoffsetArray = [];
 var baseS = 0,
 	baseT = 0;
 var counter = 0;
-var sprite;
 var animalup,animaldown;
 
 init();
@@ -50,15 +49,14 @@ function setUpOffsetArray(){
 }
 
 function buildSprite(texMat){
-	
-var geometry = new THREE.Geometry();
+	//animaldown
+	var geometry = new THREE.Geometry();
 	geometry.vertices.push(		//調整動畫大小
 		new THREE.Vector3(-8, -8, 0),
 		new THREE.Vector3(8, -8, 0),
 		new THREE.Vector3(8, 8, 0),
 		new THREE.Vector3(-8, 8, 0)
 	);
-	
 
 	var face;
 	face = new THREE.Face3(0, 1, 2);
@@ -78,15 +76,42 @@ var geometry = new THREE.Geometry();
 	geometry.computeFaceNormals();
 	geometry.computeVertexNormals();
 
-	sprite = new THREE.Mesh(geometry, texMat);
-	//scene.add(sprite);
+	animaldown = new THREE.Mesh(geometry, texMat);
+	scene.add(animaldown);
+	animaldown.position.set(-10,-10,0);
+	animaldown.rotation.y = Math.PI;
 
-	animalup = sprite.clone();
+	//animalup
+	var geometryup = new THREE.Geometry();
+	geometryup.vertices.push(		//調整動畫大小
+		new THREE.Vector3(-5, -5, 0),
+		new THREE.Vector3(5, -5, 0),
+		new THREE.Vector3(5, 5, 0),
+		new THREE.Vector3(-5, 5, 0)
+	);
+	var faceup;
+	faceup = new THREE.Face3(0, 1, 2);
+	geometryup.faces.push(faceup);
+	faceup = new THREE.Face3(0, 2, 3);
+	geometryup.faces.push(faceup);
+  
+	var uv0 = new THREE.Vector2(0.0,0.5);
+	var uv1 = new THREE.Vector2(0.25,0.5);
+	var uv2 = new THREE.Vector2(0.25,1.0);
+	var uv3 = new THREE.Vector2(0.0,1.0);
+  
+	geometryup.faceVertexUvs[0].push([uv0, uv1, uv2]);
+	geometryup.faceVertexUvs[0].push([uv0, uv2, uv3]);
+
+	geometryup.computeBoundingSphere();
+	geometryup.computeFaceNormals();
+	geometryup.computeVertexNormals();
+
+	animalup = new THREE.Mesh(geometryup, texMat);
 	scene.add(animalup);
-	//animalup.position = new THREE.Vector3(0,10,0);
 	animalup.position.set(10,10,0);
 	
-	animaldown = sprite.clone();
+	
 	scene.add(animaldown);
 	animaldown.position.set(-10,-10,0);
 	animaldown.rotation.y = Math.PI;
@@ -173,7 +198,13 @@ function onWindowResize() {
 function spriteAnimate() {
 	console.log (uvoffsetArray[baseS][baseT]);
   
-	sprite.material.map.offset.copy (uvoffsetArray[baseS][baseT]);  
+	animaldown.material.map.offset.copy (uvoffsetArray[baseS][baseT]);  
+	baseT = (baseT + 1) % 4;
+	if (baseT === 0) {
+    baseS = (baseS + 1) % 2;
+	}
+	
+	animalup.material.map.offset.copy (uvoffsetArray[baseS][baseT]);  
 	baseT = (baseT + 1) % 4;
 	if (baseT === 0) {
     baseS = (baseS + 1) % 2;
