@@ -1,0 +1,112 @@
+<html>
+<head>
+<style>
+#info {
+  position: absolute;
+  text-align: center;
+  width: 100vw;
+}
+</style>
+<body>
+<div id="info">
+	<h1 style='color:pink'>HUD as Frame Border</h1>
+</div>
+
+<script type = 'module'>
+javascript:(function(){var script=document.createElement('script');script.onload=function(){var stats=new Stats();document.body.appendChild(stats.dom);requestAnimationFrame(function loop(){stats.update();requestAnimationFrame(loop)});};script.src='https://mrdoob.github.io/stats.js/build/stats.min.js';document.head.appendChild(script);})()
+
+import * as THREE from 'https://unpkg.com/three/build/three.module.js';
+import { OrbitControls } from 'https://unpkg.com/three/examples/jsm/controls/OrbitControls.js';
+
+var scene,camera,renderer;
+var sceneHUD,cameraHUD,controls;
+
+init();
+animate();
+
+function init(){
+	scene = new THREE.Scene();
+	
+	camera = new THREE.PerspectiveCamera(50,window.innerWidth/window.innerHeight,1,10000);
+	camera.position.z = 200;
+	
+	//OrthographicCamera正交攝影機
+	cameraHUD = new THREE.OrthographicCamera(-10,10,10,-10,-10,1600);
+	//有6個參數，left,right,top,bottom,near = 近端面,far = 遠端面
+	cameraHUD.position.z = 1580;
+	
+	renderer = new THREE.WebGLRenderer();
+	renderer.setSize(window.innerWidth,window.innerHeight);
+	renderer.setClearColor(0x888888);
+	document.body.appendChild(renderer.domElement);
+	
+	controls = new OrbitControls(camera,renderer.domElement);
+	
+	var light = new THREE.PointLight(0xffffff);
+	light.position.set(100,300,200);
+	scene.add(light);
+	
+	var gridxz = new THREE.GridHelper(200,20,'red','white');
+	scene.add(gridxz);
+	
+	
+	///Gun
+	let loader = new THREE.TextureLoader();
+	loader.crossOrigin = '';
+	var texture = loader.load('https://i.imgur.com/qrxgp1q.png');
+	
+	var texMat = new THREE.MeshBasicMaterial({
+		map: texture,
+		alphaTest: 0.5	//透明度
+	});
+	var gun = new THREE.Mesh(new THREE.PlaneGeometry(80,60),texMat);
+	scene.add(gun);
+	gun.position.set(-50,0,80);
+	
+	///
+	var cube1 = new THREE.Mesh(new THREE.BoxGeometry(20,20,20),
+		new THREE.MeshLambertMaterial({
+			color:0xff1234
+		}));
+	cube1.position.x = -60;
+	scene.add(cube1);
+	
+	var cube2 = cube1.clone();
+	cube2.material = new THREE.MeshLambertMaterial({
+		color: 0x2134ff
+	});
+	cube2.position.x = 60;
+	scene.add(cube2);
+	
+	sceneHUD = new THREE.Scene();
+	
+	///
+	var fframe = new THREE.Mesh(new THREE.PlaneGeometry(20,2),
+		new THREE.MeshBasicMaterial({
+			color: 0xffff34,
+			opacity: 0.3,
+			transparent: true,
+			depthTest: false
+		}));
+	var fup = fframe.clone();
+	fup.position.set(0,9,0);
+	var fdown = fframe.clone();
+	fdown.position.set(0,-9,0);
+	sceneHUD.add(fup);
+	sceneHUD.add(fdown);
+	
+	renderer.autoClear = false;
+}
+
+function animate(){
+	controls.update();
+	requestAnimationFrame(animate);
+	
+	renderer.clear(true);
+	renderer.render(scene,camera);
+	renderer.render(sceneHUD,cameraHUD);
+}
+	
+</script>
+</body>
+</html>
