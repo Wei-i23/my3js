@@ -9,7 +9,7 @@
 </style>
 <body>
 <div id="info">
-	<h1 style='color:pink'>Shooting-Circle</h1>
+	<h1 style='color:pink'>Shooting-square</h1>
 </div>
 
 <script src="https://jyunming-chen.github.io/tutsplus/js/KeyboardState.js"></script>
@@ -41,7 +41,6 @@ var hudCamera, hudScene;
 init();
 animate();
 
-//砲台
 function makeBarrel(barrelLength) {
    let barrel = new THREE.Group();
    let _barrel = new THREE.Group();
@@ -145,17 +144,17 @@ function init(){
 	
 	camera.position.set(3,3,-15);
 	camera.lookAt(bulletVector.position);
-
+	//gun.add(camera);
 	gun.add(bulletVector,gunVector);
 	gun.position.y = 8;
 	scene.add(gun);
 	
 	///目標物
-	var cube1 = new THREE.Mesh(new THREE.SphereGeometry(10,32,32),
+	var cube1 = new THREE.Mesh(new THREE.BoxGeometry(10,10,10),
 		new THREE.MeshBasicMaterial({
 			color:0x003377
 		}));
-	cube1.position.set(-60,10,0);
+	cube1.position.set(-60,5,0);
 	scene.add(cube1);
 	
 	for(let i=0;i<10;i++){
@@ -164,7 +163,7 @@ function init(){
 		
 		cubes.push(cube);
 		scene.add(cube);
-		cube.position.y = 10;
+		cube.position.y = 5;
 	}
 	
 	//bomb
@@ -342,7 +341,7 @@ function animate(){
 	
 	gun.rotation.y = angle;
 	
-	//利用鍵盤控制
+	
 	keyboard.update();
 	if (keyboard.down('left')) {
 		yaw += 0.05;
@@ -356,7 +355,7 @@ function animate(){
 	if (keyboard.down('down')) {
 		pitch += 0.05;
 	}
-	//顯示瞄準
+	
 	if (keyboard.pressed('Z')) {
 		zoom = true;
 	} else {
@@ -390,13 +389,43 @@ function animate(){
 	//子彈移動
 	let x = -1,y = -1;
 	for(let i=0; i < bullets.length ; i++){
+		//original原本的位置
+		let origPosition = bullets[i].bullet.position;
+		//next下一個的位置
+		let nextPosition = bullets[i].bullet.position.clone().add(bullets[i].direction.clone().setLength(2));
+		
 		for(let j=0; j < cubes.length ; j++){
-			let meet = bullets[i].bullet.position.clone().sub(cubes[j].position).length();
-			if(meet < 10.5){
-				x = i;
-				y = j;
+			let xMin = -5, xMax = 5;
+			let zMin = -5, zMax = 5;
+			
+			//子彈對目標的世界目標
+			//把子彈的座標轉換成目標座標
+			let bulletOrigLocalPosition = cubes[j].worldToLocal(origPosition.clone()).clone();
+			let bulletNextLocalPosition = cubes[j].worldToLocal(nextPosition.clone()).clone();
+			
+			let c1 = 0,c2 = 0;
+			
+			if(bulletOrigLocalPosition.x < xMin)	c1+=1;
+			if(bulletOrigLocalPosition.x > xMax)	c1+=2;
+			if(bulletOrigLocalPosition.z < zMin)	c1+=4;
+			if(bulletOrigLocalPosition.z > zMax)	c1+=8;
+			
+			if(bulletNextLocalPosition.x < xMin)	c2+=1;
+			if(bulletNextLocalPosition.x > xMax)	c2+=2;
+			if(bulletNextLocalPosition.z < zMin)	c2+=4;
+			if(bulletNextLocalPosition.z > zMax)	c2+=8;
+			
+			//打中目標
+			if(c1 == c2 && c1 == 0){
+				x=i;
+				y=j;
+			}
+			else if(c1 & c2 ==0){
+				x=i;
+				y=j;
 			}
 		}
+		bullets[i].bullet.position.copy(nextPosition);
 	}
 	
 	if(x !== -1 && y !== -1){
